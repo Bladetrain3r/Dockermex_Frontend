@@ -4,3 +4,4 @@ html/*.jpg
 *.wad
 *.crt
 *.key
+nginx/modsecurity/owasp-crs/rules/*
