@@ -5,3 +5,4 @@ html/*.jpg
 *.crt
 *.key
 nginx/modsecurity/owasp-crs/rules/*
+ssl/fullchain.cer
