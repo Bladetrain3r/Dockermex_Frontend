@@ -1,4 +1,4 @@
-FROM nginx:alpine AS builder
+FROM nginx:1.27.5-alpine-slim AS builder
 
 # Install build dependencies
 RUN apk add --no-cache \    
@@ -24,10 +24,17 @@ RUN apk add --no-cache \
     file
 
 FROM builder AS modsecurity
+ENV NGINX_VERSION=1.27.5
 
 # Build ModSecurity
-COPY submodules/modsecurity /usr/src/modsecurity
-WORKDIR /usr/src/modsecurity
+
+# Clone ModSecurity repository
+
+WORKDIR /usr/src
+RUN git clone https://github.com/owasp-modsecurity/ModSecurity.git --recurse-submodules
+# RUN git submodule update --init --recursive
+WORKDIR /usr/src/ModSecurity
+
 RUN ./build.sh && \
     ./configure && \
     make && \
@@ -35,20 +42,27 @@ RUN ./build.sh && \
 
 # Get nginx sources for current version
 WORKDIR /usr/src
-RUN nginx_version=$(nginx -v 2>&1 | sed 's/^nginx version: nginx\///') && \
-    curl -fSL http://nginx.org/download/nginx-${nginx_version}.tar.gz -o nginx.tar.gz && \
+RUN curl -fSL http://nginx.org/download/nginx-${NGINX_VERSION}.tar.gz -o nginx.tar.gz && \
     tar -zxC /usr/src -f nginx.tar.gz
 
+# Clean up the tarball
+RUN rm -f nginx.tar.gz
+
+FROM modsecurity AS modules
+ENV NGINX_VERSION=1.27.5
+WORKDIR /usr/src
+RUN git clone https://github.com/SpiderLabs/ModSecurity-nginx.git
+
 # Build ModSecurity-nginx connector
-COPY submodules/modsecurity-nginx /usr/src/modsecurity-nginx
-RUN nginx_version=$(nginx -v 2>&1 | sed 's/^nginx version: nginx\///') && \
-    cd /usr/src/nginx-${nginx_version} && \
-    ./configure --with-compat --add-dynamic-module=/usr/src/modsecurity-nginx && \
+# COPY submodules/ModSecurity-nginx /usr/src/ModSecurity-nginx
+
+WORKDIR /usr/src/nginx-${NGINX_VERSION}
+RUN ./configure --with-compat --add-dynamic-module=/usr/src/ModSecurity-nginx && \
     make modules
 
 # Final image
 FROM builder
-COPY --from=modsecurity /usr/src/nginx-*/objs/ngx_http_modsecurity_module.so /etc/nginx/modules/
+COPY --from=modules /usr/src/nginx-*/objs/ngx_http_modsecurity_module.so /etc/nginx/modules/
 COPY --from=modsecurity /usr/local/modsecurity/ /usr/local/modsecurity/
 
 # Configure ModSecurity
