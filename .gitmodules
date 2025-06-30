@@ -1,9 +1,0 @@
-[submodule "submodules/modsecurity"]
-	path = submodules/modsecurity
-	url = https://github.com/SpiderLabs/ModSecurity.git
-[submodule "submodules/modsecurity-nginx"]
-	path = submodules/modsecurity-nginx
-	url = https://github.com/SpiderLabs/ModSecurity-nginx.git
-[submodule "submodules/owasp-crs"]
-	path = submodules/owasp-crs
-	url = https://github.com/coreruleset/coreruleset.git
